@@ -189,6 +189,33 @@
   .dp-apply{background:#1a56db;color:#fff;}
   .dp-apply:hover{background:#2563eb;}
 
+  /* selector de campanhas (reusa .dp-btn / .dp-panel / .dp-foot / .dp-actions) */
+  .sel-row{display:flex;align-items:center;gap:10px;}
+  .cp-wrap{position:relative;}
+  .cp-panel{flex-direction:column;left:0;right:auto;width:320px;}
+  .cp-list{
+    display:flex;flex-direction:column;gap:1px;
+    max-height:360px;overflow-y:auto;padding-right:4px;
+  }
+  .cp-list::-webkit-scrollbar{width:6px;}
+  .cp-list::-webkit-scrollbar-thumb{background:#1c2e4d;border-radius:3px;}
+  .cp-item{
+    display:flex;align-items:center;gap:9px;
+    padding:7px 9px;border-radius:7px;cursor:pointer;
+    font-size:12px;color:#c3c9d6;
+  }
+  .cp-item:hover{background:#12213c;}
+  .cp-item input{accent-color:#2f7cf6;width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+  .cp-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-status{
+    font-size:9.5px;font-weight:700;letter-spacing:.3px;
+    padding:2px 6px;border-radius:4px;flex-shrink:0;
+  }
+  .cp-status.on{background:#0f2e1c;color:#3ddc84;}
+  .cp-status.off{background:#26120f;color:#e0846f;}
+  .cp-empty{font-size:12px;color:#7c869c;padding:12px 9px;}
+  .cp-hint{font-size:10.5px;color:#7c869c;max-width:160px;line-height:1.4;}
+
   .kpi-row{display:flex;gap:13px;}
   .kpi-card{
     flex:1;
@@ -371,6 +398,24 @@
 <div class="main">
   <div class="title-row">
     <h1 class="title">Agência de Tráfego - Dashboard</h1>
+    <div class="sel-row">
+    <div class="cp-wrap">
+      <button class="dp-btn" id="cpBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 11l16-6v14L3 13z"/><path d="M8 13.5V19a2 2 0 0 0 3.9.7"/></svg>
+        <span id="cpLabel">Todas as campanhas</span>
+        <svg class="dp-chev" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dp-panel cp-panel" id="cpPanel">
+        <div class="cp-list" id="cpList"><div class="cp-empty">A carregar…</div></div>
+        <div class="dp-foot">
+          <div class="cp-hint" id="cpHint">Nada seleccionado = todas</div>
+          <div class="dp-actions">
+            <button class="dp-cancel" id="cpClear">Limpar</button>
+            <button class="dp-apply" id="cpApply">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="dp-wrap">
       <button class="dp-btn" id="dpBtn">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -417,6 +462,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -1132,11 +1178,12 @@ document.getElementById('dpNext').addEventListener('click', function(){ mesEsq =
 dpBtn.addEventListener('click', function(e){
   e.stopPropagation();
   var abrir = !dpPanel.classList.contains('open');
+  cpPanel.classList.remove('open');
   dpPanel.classList.toggle('open', abrir);
   if (abrir){ rasc = { ini:estado.ini, fim:estado.fim, preset:estado.preset }; desenhar(); }
 });
 dpPanel.addEventListener('click', function(e){ e.stopPropagation(); });
-document.addEventListener('click', function(){ dpPanel.classList.remove('open'); });
+document.addEventListener('click', function(){ dpPanel.classList.remove('open'); cpPanel.classList.remove('open'); });
 document.getElementById('dpCancel').addEventListener('click', function(){ dpPanel.classList.remove('open'); });
 
 document.getElementById('dpApply').addEventListener('click', function(){
@@ -1156,6 +1203,100 @@ function rotuloBotao(){
 
 /* endpoint n8n (instancia dedicada Segredos & Sabores) */
 var ENDPOINT_N8N = 'https://segredos.botanicamidias.com/webhook/meta-insights-segredos-sabores';
+var ENDPOINT_CAMPANHAS = 'https://segredos.botanicamidias.com/webhook/meta-campaigns-segredos-sabores';
+
+/* ---------- selector de campanhas ---------- */
+var cpBtn = document.getElementById('cpBtn');
+var cpPanel = document.getElementById('cpPanel');
+var cpLabel = document.getElementById('cpLabel');
+var cpList = document.getElementById('cpList');
+var cpHint = document.getElementById('cpHint');
+
+var campanhas = [];        // lista buscada UMA vez ao carregar a pagina; so muda com reload
+var campSelSet = {};       // rascunho enquanto o painel esta aberto: id -> true
+var campAplicadas = [];    // ids efectivamente aplicados (o que actualizar() envia)
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(m){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m];
+  });
+}
+
+function carregarCampanhas(){
+  fetch(ENDPOINT_CAMPANHAS, { cache: 'no-store' })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){
+      campanhas = Array.isArray(d.campanhas) ? d.campanhas : (Array.isArray(d) ? d : []);
+      renderCampanhas();
+    })
+    .catch(function(e){
+      console.error('Falha ao carregar a lista de campanhas.', e);
+      cpList.innerHTML = '<div class="cp-empty">Não foi possível carregar as campanhas.</div>';
+    });
+}
+
+function campAtiva(c){
+  if (c.ativo != null) return !!c.ativo;
+  return String(c.effective_status || c.status || '').toUpperCase() === 'ACTIVE';
+}
+
+function renderCampanhas(){
+  if (!campanhas.length){ cpList.innerHTML = '<div class="cp-empty">Sem campanhas na conta.</div>'; return; }
+  cpList.innerHTML = '';
+  campanhas.forEach(function(c){
+    var on = campAtiva(c);
+    var row = document.createElement('label');
+    row.className = 'cp-item';
+    row.innerHTML =
+      '<input type="checkbox"' + (campSelSet[c.id] ? ' checked' : '') + '>' +
+      '<span class="cp-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span>' +
+      '<span class="cp-status ' + (on ? 'on' : 'off') + '">' + (on ? 'ACTIVA' : 'PAUSADA') + '</span>';
+    row.querySelector('input').addEventListener('change', function(){
+      if (this.checked) campSelSet[c.id] = true; else delete campSelSet[c.id];
+      atualizarHintCamp();
+    });
+    cpList.appendChild(row);
+  });
+  atualizarHintCamp();
+}
+
+function atualizarHintCamp(){
+  var n = Object.keys(campSelSet).length;
+  cpHint.textContent = n ? (n + ' seleccionada' + (n > 1 ? 's' : '')) : 'Nada seleccionado = todas';
+}
+
+function rotuloCampanhas(){
+  var n = campAplicadas.length;
+  if (!n) return 'Todas as campanhas';
+  if (n === 1){
+    var c = campanhas.filter(function(x){ return String(x.id) === String(campAplicadas[0]); })[0];
+    return c ? c.name : '1 campanha';
+  }
+  return n + ' campanhas';
+}
+
+cpBtn.addEventListener('click', function(e){
+  e.stopPropagation();
+  var abrir = !cpPanel.classList.contains('open');
+  dpPanel.classList.remove('open');
+  cpPanel.classList.toggle('open', abrir);
+  if (abrir){
+    campSelSet = {};
+    campAplicadas.forEach(function(id){ campSelSet[id] = true; });
+    renderCampanhas();
+  }
+});
+cpPanel.addEventListener('click', function(e){ e.stopPropagation(); });
+document.getElementById('cpClear').addEventListener('click', function(){
+  campSelSet = {};
+  renderCampanhas();
+});
+document.getElementById('cpApply').addEventListener('click', function(){
+  campAplicadas = Object.keys(campSelSet);
+  cpLabel.textContent = rotuloCampanhas();
+  cpPanel.classList.remove('open');
+  actualizar();
+});
 
 function fmtISO(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 function incParaMeta(ini, fim){
@@ -1167,6 +1308,7 @@ function actualizar(){
   dpLabel.textContent = rotuloBotao();
   var ini = estado.ini, fim = estado.fim, comparar = estado.comparar;
   var url = ENDPOINT_N8N + '?since=' + fmtISO(ini) + '&until=' + fmtISO(fim) + '&inc=' + incParaMeta(ini, fim);
+  if (campAplicadas.length) url += '&campaign_ids=' + encodeURIComponent(campAplicadas.join(','));
   fetch(url, { cache: 'no-store' })
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d){ aplicarDados(d, ini, fim, comparar); })
@@ -1194,6 +1336,7 @@ if (btnRefresh){
   estado.ini = r[0]; estado.fim = r[1]; estado.preset = 'd30';
   rasc = { ini:r[0], fim:r[1], preset:'d30' };
   desenhar();
+  carregarCampanhas();
   actualizar();
 })();
 </script>
