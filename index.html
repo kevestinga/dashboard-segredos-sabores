@@ -839,7 +839,7 @@ function fmtLongo(d){ return d.getDate()+' de '+MESES[d.getMonth()].toLowerCase(
 function difDias(a,b){ return Math.round((d0(b)-d0(a))/MS_DIA); }
 function mil(v,sep){ return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, sep||'.'); }
 
-var HOJE = new Date(2026, 7, 29); // ultima data com dados fechados
+var HOJE = d0(new Date()); // data actual
 
 var PRESETS = [
   { id:'hoje',          label:'Hoje',            calc:function(){ return [HOJE, HOJE]; } },
@@ -853,7 +853,7 @@ var PRESETS = [
   { id:'ultima_semana', label:'Última semana',   calc:function(){ var i=addDias(inicioSemana(HOJE),-7); return [i, addDias(i,6)]; } },
   { id:'este_mes',      label:'Este mês',        calc:function(){ return [inicioMes(HOJE), HOJE]; } },
   { id:'mes_passado',   label:'O mês passado',   calc:function(){ var m=addMeses(HOJE,-1); return [inicioMes(m), fimMes(m)]; } },
-  { id:'maximo',        label:'Máximo',          calc:function(){ return [addMeses(HOJE,-23), HOJE]; } }
+  { id:'maximo',        label:'Máximo',          calc:function(){ return [new Date(2023, 7, 1), HOJE]; } }
 ];
 
 /* gerador estavel: o mesmo intervalo produz sempre os mesmos numeros */
@@ -979,9 +979,10 @@ function aplicarDados(d, ini, fim, comparar){
     if(d.kpis[i] !== undefined) el.textContent = d.kpis[i];
   });
   document.querySelectorAll('.kpi-delta').forEach(function(el,i){
-    if(!comparar){ el.style.visibility = 'hidden'; return; }
+    var dv = d.deltas ? d.deltas[i] : undefined;
+    if(!comparar || dv === undefined || dv === '' || dv === '—'){ el.style.visibility = 'hidden'; return; }
     el.style.visibility = 'visible';
-    if(d.deltas[i] !== undefined) el.textContent = d.deltas[i] + ' vs período anterior';
+    el.textContent = dv + ' vs período anterior';
   });
 
   var c1 = chart_leadsVendasChart;
@@ -1153,9 +1154,26 @@ function rotuloBotao(){
   return (p ? p.label + ': ' : 'Personalizado: ') + intervalo;
 }
 
+/* endpoint n8n (instancia dedicada Segredos & Sabores) */
+var ENDPOINT_N8N = 'https://segredos.botanicamidias.com/webhook/meta-insights-segredos-sabores';
+
+function fmtISO(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function incParaMeta(ini, fim){
+  var g = granularidade(ini, fim);
+  return g === 'diario' ? '1' : g === 'semanal' ? '7' : 'monthly';
+}
+
 function actualizar(){
   dpLabel.textContent = rotuloBotao();
-  aplicarDados(gerarDados(estado.ini, estado.fim), estado.ini, estado.fim, estado.comparar);
+  var ini = estado.ini, fim = estado.fim, comparar = estado.comparar;
+  var url = ENDPOINT_N8N + '?since=' + fmtISO(ini) + '&until=' + fmtISO(fim) + '&inc=' + incParaMeta(ini, fim);
+  fetch(url, { cache: 'no-store' })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){ aplicarDados(d, ini, fim, comparar); })
+    .catch(function(e){
+      console.error('Falha ao obter dados reais do n8n; a mostrar dados locais de exemplo.', e);
+      aplicarDados(gerarDados(ini, fim), ini, fim, comparar);
+    });
 }
 
 /* botao de actualizar do rodape */
