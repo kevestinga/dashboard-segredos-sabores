@@ -614,18 +614,9 @@
       <div class="donut-body">
         <div class="donut-wrap">
           <canvas id="criativoChart"></canvas>
-          <div class="donut-center">Criativo A</div>
+          <div class="donut-center">Criativos</div>
         </div>
-        <div class="donut-legend">
-          <div class="donut-legend-item">
-            <svg class="star" viewBox="0 0 24 24" fill="#2f7cf6"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L6 21l1.6-7-5.4-4.7 7.1-.6z"/></svg>
-            <span class="legend-line">CTR<span class="ctrval">3.2%</span></span>
-          </div>
-          <div class="donut-legend-item"><span class="sq" style="background:#1a56db;"></span>Vendas<span class="val">1.210</span></div>
-          <div class="donut-legend-item"><span class="sq" style="background:#2f7cf6;"></span><span class="val">500</span></div>
-          <div class="donut-legend-item"><span class="sq" style="background:#17b6d8;"></span><span class="val">500</span></div>
-          <div class="donut-legend-item"><span class="sq" style="background:#f4790a;"></span><span class="val">570</span></div>
-        </div>
+        <div class="donut-legend" id="criativoLegend"></div>
       </div>
       <div class="metrics-strip">
         <div class="metric-mini">CTR<span class="mval blue"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>3.2%</span></div>
@@ -680,6 +671,7 @@ const donutLabelsPlugin = {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     meta.data.forEach((arc, i) => {
+      if ((data[i] || 0) < 8) return;   // fatias pequenas: sem rotulo (fica ilegivel)
       const pos = arc.tooltipPosition();
       ctx.fillStyle = (bg[i] === '#e8ecf3') ? '#0a1e42' : '#ffffff';
       ctx.fillText(data[i] + '%', pos.x, pos.y);
@@ -978,14 +970,10 @@ function aplicarDados(d, ini, fim, comparar){
     if(d.funilPct[i] !== undefined) el.textContent = d.funilPct[i];
   });
 
-  chart_criativoChart.data.datasets[0].data = d.criativo;
-  chart_criativoChart.update();
+  // donut "Criativo" é actualizado à parte, por actualizarCriativos() (endpoint próprio)
   chart_publicoChart.data.datasets[0].data = d.publico;
   chart_publicoChart.update();
 
-  document.querySelectorAll('.donut-panel:not(.wide) .donut-legend .val').forEach(function(el,i){
-    if(d.criativoVals[i] !== undefined) el.textContent = d.criativoVals[i];
-  });
   document.querySelectorAll('.donut-panel.wide .donut-legend .val').forEach(function(el,i){
     if(d.publicoVals[i] !== undefined) el.textContent = d.publicoVals[i];
   });
@@ -1122,6 +1110,7 @@ function rotuloBotao(){
 /* endpoint n8n (instancia dedicada Segredos & Sabores) */
 var ENDPOINT_N8N = 'https://segredos.botanicamidias.com/webhook/meta-insights-segredos-sabores';
 var ENDPOINT_CAMPANHAS = 'https://segredos.botanicamidias.com/webhook/meta-campaigns-segredos-sabores';
+var ENDPOINT_CRIATIVOS = 'https://segredos.botanicamidias.com/webhook/meta-creatives-segredos-sabores';
 
 /* ---------- selector de campanhas ---------- */
 var cpBtn = document.getElementById('cpBtn');
@@ -1225,6 +1214,7 @@ function incParaMeta(ini, fim){
 /* ---------- estado de erro (sem dados fictícios) ---------- */
 var errBanner = document.getElementById('errBanner');
 var errMsg = document.getElementById('errMsg');
+var erroMain = false, erroCriativos = false;
 
 function mostrarErro(txt){
   if (errMsg && txt) errMsg.textContent = txt;
@@ -1233,8 +1223,14 @@ function mostrarErro(txt){
 function esconderErro(){
   if (errBanner) errBanner.hidden = true;
 }
+/* banner partilhado pelos 2 fetches independentes (principal + criativos) */
+function sincErro(){
+  if (erroMain) mostrarErro('Não foi possível carregar dados reais. Tenta novamente.');
+  else if (erroCriativos) mostrarErro('Não foi possível carregar o desempenho por criativo. Tenta novamente.');
+  else esconderErro();
+}
 function limparNumeros(){
-  document.querySelectorAll('.kpi-value, .funnel-step .fs-value, .pct-label, .total-val, .donut-legend .val')
+  document.querySelectorAll('.kpi-value, .funnel-step .fs-value, .pct-label, .total-val, .donut-panel.wide .donut-legend .val')
     .forEach(function(el){ el.textContent = '—'; });
   document.querySelectorAll('.kpi-delta').forEach(function(el){ el.style.visibility = 'hidden'; });
   document.querySelectorAll('.metric-mini .mval').forEach(function(el){ trocarTexto(el, '—'); });
@@ -1245,10 +1241,53 @@ function limparNumeros(){
     c.data.datasets.forEach(function(ds){ ds.data = []; });
     c.update();
   });
-  [chart_criativoChart, chart_publicoChart].forEach(function(c){
-    c.data.datasets[0].data = c.data.datasets[0].data.map(function(){ return 0; });
-    c.update();
-  });
+  chart_publicoChart.data.datasets[0].data = chart_publicoChart.data.datasets[0].data.map(function(){ return 0; });
+  chart_publicoChart.update();
+}
+
+/* ---------- donut "Desempenho por Criativo" (endpoint próprio, fetch paralelo) ---------- */
+var criativoLegend = document.getElementById('criativoLegend');
+var CRIATIVO_CORES = ['#1a56db','#f4790a','#2f7cf6','#17b6d8','#e8ecf3','#8b93a7'];
+
+function aplicarCriativos(d){
+  var lista = (d && Array.isArray(d.criativos)) ? d.criativos : [];
+  chart_criativoChart.data.datasets[0].data = lista.map(function(c){ return c.pct || 0; });
+  chart_criativoChart.data.datasets[0].backgroundColor = lista.map(function(c,i){ return c.cor || CRIATIVO_CORES[i] || '#8b93a7'; });
+  chart_criativoChart.update();
+
+  if (!criativoLegend) return;
+  if (!lista.length){
+    criativoLegend.innerHTML = '<div class="donut-legend-item" style="color:#7c869c;">Sem gasto no período</div>';
+    return;
+  }
+  criativoLegend.innerHTML = lista.map(function(c,i){
+    return '<div class="donut-legend-item" title="' + esc(c.nome_completo || c.nome_curto || '') + '">' +
+      '<span class="sq" style="background:' + (c.cor || CRIATIVO_CORES[i] || '#8b93a7') + ';"></span>' +
+      '<span class="legend-line">' + esc(c.nome_curto || '—') +
+        '<span style="color:#8b93a7;font-size:11px;">' + (c.pct != null ? c.pct + '%' : '') + '</span>' +
+      '</span>' +
+      '<span class="val">' + esc(c.gasto_fmt || '—') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function limparCriativos(){
+  chart_criativoChart.data.datasets[0].data = chart_criativoChart.data.datasets[0].data.map(function(){ return 0; });
+  chart_criativoChart.update();
+  if (criativoLegend) criativoLegend.innerHTML = '<div class="donut-legend-item" style="color:#7c869c;">—</div>';
+}
+
+function actualizarCriativos(){
+  var ini = estado.ini, fim = estado.fim;
+  var url = ENDPOINT_CRIATIVOS + '?since=' + fmtISO(ini) + '&until=' + fmtISO(fim);
+  if (campAplicadas.length) url += '&campaign_ids=' + encodeURIComponent(campAplicadas.join(','));
+  fetch(url, { cache: 'no-store' })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){ erroCriativos = false; sincErro(); aplicarCriativos(d); })
+    .catch(function(e){
+      console.error('Falha ao obter o desempenho por criativo.', e);
+      erroCriativos = true; limparCriativos(); sincErro();
+    });
 }
 
 function actualizar(force){
@@ -1259,12 +1298,12 @@ function actualizar(force){
   if (force) url += '&nocache=1';   // clique manual = classificacao de publico sempre fresca
   fetch(url, { cache: 'no-store' })
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){ esconderErro(); aplicarDados(d, ini, fim, comparar); })
+    .then(function(d){ erroMain = false; sincErro(); aplicarDados(d, ini, fim, comparar); })
     .catch(function(e){
       console.error('Falha ao obter dados reais do n8n.', e);
-      limparNumeros();
-      mostrarErro('Não foi possível carregar dados reais. Tenta novamente.');
+      erroMain = true; limparNumeros(); sincErro();
     });
+  actualizarCriativos();   // fetch paralelo (endpoint próprio) — não bloqueia o principal
 }
 
 if (document.getElementById('errRetry')){
