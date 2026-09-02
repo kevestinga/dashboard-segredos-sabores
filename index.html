@@ -1039,7 +1039,7 @@ var PRESETS = [
   { id:'ultima_semana', label:'Última semana',   calc:function(){ var i=addDias(inicioSemana(HOJE),-7); return [i, addDias(i,6)]; } },
   { id:'este_mes',      label:'Este mês',        calc:function(){ return [inicioMes(HOJE), HOJE]; } },
   { id:'mes_passado',   label:'O mês passado',   calc:function(){ var m=addMeses(HOJE,-1); return [inicioMes(m), fimMes(m)]; } },
-  { id:'maximo',        label:'Máximo',          calc:function(){ return [new Date(2023, 7, 1), HOJE]; } }
+  { id:'maximo',        label:'Máximo',          calc:function(){ return [addMeses(HOJE,-36), HOJE]; } } /* Meta Insights API rejeita time_range > 37 meses -> limitar a 36 (dados reais so comecam ~Mar/2024, nada se perde) */
 ];
 
 function granularidade(ini, fim){
