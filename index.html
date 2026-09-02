@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agência de Tráfego - Dashboard</title>
+<title>Segredos &amp; Sabores - Dashboard</title>
 <script>
 /*!
  * Chart.js v4.4.1
@@ -41,11 +41,8 @@
     font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
     background:#000c1f;
     color:var(--text);
-    width:1536px;
-    height:1024px;
-    overflow:hidden;
+    min-height:100vh;
     display:flex;
-    transform-origin:top left;
   }
   .sidebar{
     width:210px;
@@ -101,6 +98,9 @@
     flex-direction:column;
     gap:13px;
     min-width:0;
+    min-height:0;
+    height:100vh;
+    overflow:hidden;
     background:#000c1f;
   }
   h1.title{font-size:23px;font-weight:700;letter-spacing:-0.2px;margin-bottom:2px;}
@@ -259,7 +259,7 @@
   .kpi-delta.blue{color:#4d94ff;}
 
   .row2{display:flex;gap:13px;flex:1.12;min-height:0;}
-  .row3{display:flex;gap:13px;flex:1;min-height:0;}
+  .row3{display:flex;gap:13px;flex:1;min-height:0;max-height:380px;}
   .panel{
     background:var(--panel);
     border:1px solid var(--panel-border);
@@ -342,7 +342,7 @@
   .invest-panel{flex:1.16;}
   .invest-panel .panel-head{flex-direction:column;align-items:flex-start;gap:5px;margin-bottom:6px;}
   .invest-panel .legend{font-size:11.5px;gap:14px;}
-  .invest-panel .chart-wrap{flex:none;height:172px;}
+  .invest-panel .chart-wrap{flex:1;min-height:150px;}
   .totals-strip{display:flex;gap:34px;margin-top:8px;padding-top:12px;border-top:1px solid var(--panel-border);}
   .total-item{display:flex;align-items:center;gap:11px;}
   .total-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -357,7 +357,105 @@
   }
   .footer .fitem{display:flex;align-items:center;gap:9px;}
   .footer .fitem svg{width:16px;height:16px;}
-  .refresh-icon{width:18px;height:18px;color:var(--orange);}
+  .refresh-icon{width:18px;height:18px;color:var(--orange);cursor:pointer;}
+
+  .nav-label{display:inline;}
+
+  /* =================== RESPONSIVO ===================
+     Base (acima) = desktop >= 1440px: grelha 100vh, sem scroll.
+     Breakpoints: 1440 / 1200 / 768  (desktop-first, max-width).      */
+
+  /* ---- Tablet: 768px – 1439px : conteudo empilhado, com scroll ---- */
+  @media (max-width:1439px){
+    .main{ height:auto; overflow:visible; padding:20px 20px 14px; }
+    .sidebar{ position:sticky; top:0; align-self:flex-start; height:100vh; }
+    h1.title{ font-size:21px; }
+    .title-row{ flex-wrap:wrap; gap:10px; }
+
+    .kpi-row{ flex-wrap:wrap; }
+    .kpi-card{ flex:1 1 calc(33.333% - 9px); }
+    .kpi-value{ font-size:22px; }
+
+    .row2, .row3{ flex-direction:column; flex:none; min-height:0; max-height:none; }
+    .row2 > .panel, .row3 > .panel{ flex:none; }
+
+    .chart-panel .chart-wrap{ flex:none; height:clamp(280px,40vh,360px); }
+    .funnel-panel{ min-height:300px; }
+    .funnel{ min-height:260px; }
+
+    .invest-panel .chart-wrap{ flex:none; height:170px; }
+    .donut-body{ min-height:200px; }
+  }
+
+  /* ---- Tablet estreito: 768px – 1199px : sidebar so icones ---- */
+  @media (max-width:1199px){
+    .sidebar{ width:64px; min-width:64px; padding:18px 8px; align-items:center; }
+    .logo-wrap{ padding:0; margin-bottom:14px; }
+    .logo-circle{ width:44px; height:44px; }
+    .nav{ margin-top:8px; width:100%; }
+    .nav-item{ justify-content:center; padding:11px 0; gap:0; }
+    .nav-label{ display:none; }
+    .nav-item.logout{ justify-content:center; }
+  }
+
+  /* ---- Telemovel: < 768px : sidebar vira barra no topo, 1 coluna ---- */
+  @media (max-width:767px){
+    body{ flex-direction:column; }
+    .sidebar{
+      width:100%; min-width:0; height:auto; flex-direction:row; align-items:center;
+      gap:6px; padding:8px 10px; overflow-x:auto;
+      position:static; align-self:auto;
+    }
+    .logo-wrap{ margin:0; flex-shrink:0; }
+    .logo-circle{ width:36px; height:36px; }
+    .nav{ flex-direction:row; margin:0; gap:2px; }
+    .nav-item{ padding:8px 9px; }
+    .nav-spacer{ display:none; }
+    .nav-item.logout{ margin-top:0; }
+
+    .main{ padding:16px 14px 12px; gap:11px; }
+    h1.title{ font-size:19px; }
+    .title-row{ flex-direction:column; align-items:stretch; }
+    .sel-row{ flex-wrap:wrap; }
+
+    .kpi-card{ flex:1 1 calc(50% - 7px); padding:13px 14px; }
+    .kpi-value{ font-size:20px; }
+
+    .panel{ padding:15px 15px 13px; }
+    .panel-head{ flex-wrap:wrap; }
+    .panel-title{ white-space:normal; }
+    .legend{ white-space:normal; }
+
+    .chart-panel .chart-wrap{ height:260px; }
+    .funnel-panel{ min-height:280px; }
+
+    .donut-body{ flex-wrap:wrap; }
+    .donut-wrap{ width:150px; height:150px; }
+    .donut-wrap.big{ width:168px; height:168px; }
+    .donut-legend{ flex:1 1 100%; }
+
+    .totals-strip{ gap:18px; flex-wrap:wrap; }
+    .metrics-strip{ flex-wrap:wrap; gap:8px; }
+    .footer{ flex-direction:column; align-items:flex-start; gap:8px; }
+
+    /* popovers ocupam a largura do ecra */
+    .dp-panel{
+      position:fixed; left:8px; right:8px; top:60px;
+      max-height:calc(100vh - 76px); overflow-y:auto;
+    }
+    .dp-panel.open{ display:flex; flex-direction:column; }
+    .dp-presets{
+      width:100%; max-height:none; border-right:none;
+      border-bottom:1px solid #172741; padding-right:0; padding-bottom:8px;
+    }
+    .dp-right{ width:100%; }
+    .dp-cals{ flex-direction:column; gap:14px; }
+    .dp-cal{ width:100%; }
+    .cp-panel{ width:auto; }
+    .cp-hint{ max-width:none; }
+    .dp-foot{ flex-direction:column; align-items:stretch; gap:10px; }
+    .dp-range input{ width:100%; }
+  }
 </style>
 </head>
 <body>
@@ -372,47 +470,47 @@
   <div class="nav">
     <div class="nav-item active">
       <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M3 20h18"/><rect x="5" y="12" width="3" height="8" rx="0.5"/><rect x="10.5" y="8" width="3" height="12" rx="0.5"/><rect x="16" y="4" width="3" height="16" rx="0.5"/></svg>
-      Resumo Semanal
+      <span class="nav-label">Resumo Semanal</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/><path d="M20 4l-4.5 4.5" stroke-linecap="round"/></svg>
-      Tráfego
+      <span class="nav-label">Tráfego</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8.5" cy="9" r="3"/><circle cx="16" cy="10" r="2.3"/><path d="M2.5 19c0-3 2.5-5.2 6-5.2s6 2.2 6 5.2"/><path d="M15 14.5c2.7.3 4.5 2.1 4.5 4.5"/></svg>
-      Leads
+      <span class="nav-label">Leads</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Conversas
+      <span class="nav-label">Conversas</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h2l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-      Vendas
+      <span class="nav-label">Vendas</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-      Relatórios
+      <span class="nav-label">Relatórios</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>
-      Telas
+      <span class="nav-label">Telas</span>
     </div>
     <div class="nav-item">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Configurações
+      <span class="nav-label">Configurações</span>
     </div>
   </div>
   <div class="nav-spacer"></div>
   <div class="nav-item logout">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-    Sair
+    <span class="nav-label">Sair</span>
   </div>
 </div>
 
 <div class="main">
   <div class="title-row">
-    <h1 class="title">Agência de Tráfego - Dashboard</h1>
+    <h1 class="title">Segredos &amp; Sabores - Dashboard</h1>
     <div class="sel-row">
     <div class="cp-wrap">
       <button class="dp-btn" id="cpBtn">
@@ -1347,13 +1445,41 @@ if (btnRefresh){
 </script>
 
 <script>
-  function fitToScreen(){
-    var s=Math.min(window.innerWidth/1536, window.innerHeight/1024);
-    document.body.style.transform='scale('+s+')';
-  }
-  window.addEventListener('load',fitToScreen);
-  window.addEventListener('resize',fitToScreen);
-  fitToScreen();
+  /* Layout responsivo puro (sem transform:scale). Os graficos Chart.js
+     redimensionam-se com o contentor; reforcamos com resize() explicito
+     em resize / orientationchange / mudanca de breakpoint.               */
+  (function(){
+    var charts = [
+      typeof chart_leadsVendasChart !== 'undefined' ? chart_leadsVendasChart : null,
+      typeof chart_investChart      !== 'undefined' ? chart_investChart      : null,
+      typeof chart_criativoChart    !== 'undefined' ? chart_criativoChart    : null,
+      typeof chart_publicoChart     !== 'undefined' ? chart_publicoChart     : null
+    ];
+    function resizeAll(){
+      for (var i=0;i<charts.length;i++){
+        if (charts[i]){ try { charts[i].resize(); } catch(e){} }
+      }
+    }
+    var t;
+    window.addEventListener('resize', function(){
+      clearTimeout(t); t = setTimeout(resizeAll, 150);
+    });
+    window.addEventListener('orientationchange', function(){
+      setTimeout(resizeAll, 300);
+    });
+    ['(min-width:768px)','(min-width:1200px)','(min-width:1440px)'].forEach(function(q){
+      var mq = window.matchMedia(q);
+      var h = function(){ setTimeout(resizeAll, 80); };
+      if (mq.addEventListener) mq.addEventListener('change', h);
+      else if (mq.addListener) mq.addListener(h);
+    });
+    window.addEventListener('load', function(){
+      resizeAll();
+      setTimeout(resizeAll, 400);
+      setTimeout(resizeAll, 1200);
+    });
+    if (document.readyState === 'complete') setTimeout(resizeAll, 200);
+  })();
 </script>
 </body>
 </html>
